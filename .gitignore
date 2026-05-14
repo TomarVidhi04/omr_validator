@@ -13,8 +13,9 @@ db.sqlite3
 db.sqlite3-journal
 *.log
 
-# Data folder (images / crops live outside source control)
-data/
+# Pipeline I/O — raw scans, cropped sheets, section crops
+data screen/
+output/
 
 # OS
 .DS_Store

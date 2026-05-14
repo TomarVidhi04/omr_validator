@@ -17,15 +17,17 @@ from ..models import ExtractedSection, FinalLabel, OcrPrediction
 from ..utils import find_consensus, validate_section_text
 from .base import BaseOcrService
 from .dots_ocr import DotsOcrService
+from .easyocr_ocr import EasyOcrService
 from .glm_ocr import GlmOcrService
 from .trocr_ocr import TrOcrService
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_SERVICE_CLASSES: list[type[BaseOcrService]] = [
-    GlmOcrService,
-    DotsOcrService,
-    TrOcrService,
+    EasyOcrService,   # reliable on macOS CPU, ~100MB on first run
+    # GlmOcrService,  # cloud API — uncomment + set ZHIPUAI_API_KEY to enable
+    # TrOcrService,   # hallucinates on handwritten codes; uncomment if useful
+    # DotsOcrService, # custom model has Python 3.14 / transformers compat bug
 ]
 
 

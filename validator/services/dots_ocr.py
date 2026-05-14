@@ -58,12 +58,21 @@ class DotsOcrService(BaseOcrService):
                 ],
             }
         ]
-        inputs = self._processor.apply_chat_template(
-            messages,
-            add_generation_prompt=True,
+        # ``apply_chat_template(tokenize=False)`` returns the formatted prompt
+        # string. We feed that plus the image into the processor to get the
+        # actual model inputs (a BatchFeature with .to()).
+        prompt_text = self._processor.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = self._processor(
+            text=[prompt_text],
+            images=[image],
+            padding=True,
             return_tensors="pt",
-            return_dict=True,
         ).to(self._device)
+        # dots.ocr's processor includes ``mm_token_type_ids`` which the model's
+        # generate() rejects. Drop any keys the model doesn't accept.
+        inputs.pop("mm_token_type_ids", None)
         with torch.no_grad():
             output_ids = self._model.generate(
                 **inputs, max_new_tokens=64, do_sample=False

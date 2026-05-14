@@ -1,14 +1,11 @@
-"""Walk the data/ folder and populate the database.
+"""Walk the pipeline output folders and populate the database.
 
-Expected layout (under settings.DATA_DIR):
+Reads from settings.OMR_IMAGES_DIR (default: output/cropped/part-d/) and
+settings.EXTRACTED_SECTIONS_DIR (default: output/sections/part-d/), and
+stores paths relative to settings.MEDIA_ROOT so the labeling UI can serve
+them via MEDIA_URL.
 
-    omr_images/0001.jpg
-    extracted_sections/0001/registration_no.jpg
-    extracted_sections/0001/roll_no.jpg
-    extracted_sections/0001/course_code.jpg
-    ...
-
-Each sub-folder under ``extracted_sections/`` is matched to an OMR image by
+Each sub-folder under EXTRACTED_SECTIONS_DIR is matched to an OMR image by
 its base name (without extension).
 """
 
@@ -25,7 +22,7 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 
 
 class Command(BaseCommand):
-    help = "Scan data/omr_images and data/extracted_sections, populating the DB."
+    help = "Scan output/cropped/part-d and output/sections/part-d, populating the DB."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -40,11 +37,18 @@ class Command(BaseCommand):
             default=None,
             help="Override settings.EXTRACTED_SECTIONS_DIR.",
         )
+        parser.add_argument(
+            "--types",
+            nargs="+",
+            default=None,
+            help="Section types to ingest (default: settings.LABEL_SECTION_TYPES).",
+        )
 
     def handle(self, *args, **opts):
         omr_dir: Path = opts["omr_dir"] or settings.OMR_IMAGES_DIR
         sections_dir: Path = opts["sections_dir"] or settings.EXTRACTED_SECTIONS_DIR
-        data_root: Path = Path(settings.DATA_DIR)
+        media_root: Path = Path(settings.MEDIA_ROOT)
+        wanted_types = set(opts["types"] or settings.LABEL_SECTION_TYPES)
 
         if not omr_dir.exists():
             self.stderr.write(self.style.ERROR(f"Missing folder: {omr_dir}"))
@@ -60,7 +64,7 @@ class Command(BaseCommand):
             if image_file.suffix.lower() not in IMAGE_EXTENSIONS:
                 continue
 
-            rel_path = image_file.resolve().relative_to(data_root.resolve()).as_posix()
+            rel_path = image_file.resolve().relative_to(media_root.resolve()).as_posix()
             omr, created = OmrImage.objects.get_or_create(
                 image_name=image_file.stem,
                 defaults={"original_image_path": rel_path},
@@ -77,7 +81,9 @@ class Command(BaseCommand):
             for crop in sorted(section_folder.iterdir()):
                 if crop.suffix.lower() not in IMAGE_EXTENSIONS:
                     continue
-                rel_crop = crop.resolve().relative_to(data_root.resolve()).as_posix()
+                if crop.stem not in wanted_types:
+                    continue
+                rel_crop = crop.resolve().relative_to(media_root.resolve()).as_posix()
                 _, sec_created = ExtractedSection.objects.update_or_create(
                     omr_image=omr,
                     section_type=crop.stem,

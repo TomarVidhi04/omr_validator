@@ -1,6 +1,11 @@
 # Core
 Django>=5.0,<6.0
 Pillow>=10.0
+opencv-python>=4.8       # used by extract_sections.py + crop_omr.py
+
+# OCR — easyocr is the default. Downloads ~100MB detector+recognizer on first
+# run, then cached at ~/.EasyOCR/model.
+easyocr>=1.7
 
 # OCR models (optional — services degrade gracefully if not installed)
 torch

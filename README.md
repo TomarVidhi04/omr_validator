@@ -19,22 +19,15 @@ keyboard shortcuts and the validated value is saved to SQLite.
 
 ## Folder layout
 
-The app expects the preprocessing step to have produced this (default
-location is `data/` inside this repo — override with `OMR_DATA_DIR=/path`):
+```
+data screen/
+    part-d/01/<sheet>.jpg              # raw scans you drop in
+output/
+    cropped/part-d/<sheet>.jpg         # crop_omr.py output
+    sections/part-d/<sheet>/<section>.jpg   # extract_sections.py output
+```
 
-```
-data/
-    omr_images/
-        0001.jpg
-        0002.jpg
-    extracted_sections/
-        0001/
-            registration_no.jpg
-            roll_no.jpg
-            course_code.jpg
-        0002/
-            ...
-```
+Both `data screen/` and `output/` are gitignored.
 
 ## Setup
 
@@ -50,7 +43,18 @@ python manage.py createsuperuser   # optional, for /admin/
 ## Run
 
 ```bash
-# 1. Index the data folder into the DB
+# 0a. Drop your raw scans into:
+#       data screen/part-d/01/*.jpg
+
+# 0b. Crop each scan down to the Part-D area (600x1400).
+python crop_omr.py
+# -> writes output/cropped/part-d/<sheet>.jpg
+
+# 0c. Slice each cropped sheet into 15 sections.
+python extract_sections.py
+# -> writes output/sections/part-d/<sheet>/<section>.jpg
+
+# 1. Index the pipeline output into the DB
 python manage.py ingest_data
 
 # 2. Run OCR over every section (only fills in missing predictions by default)

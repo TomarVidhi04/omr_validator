@@ -6,13 +6,18 @@ import re
 from collections import Counter
 from typing import Iterable
 
-from .models import ExtractedSection
+# Section type -> regex the final text must match. Section names that the
+# Part-D extract step produces (``*_written``) are listed alongside the
+# canonical bare names so both flavors validate.
+_NUMERIC = re.compile(r"^\d+$")
+_ALPHANUM = re.compile(r"^[A-Za-z0-9]+$")
 
-# Section type -> regex the final text must match.
 SECTION_VALIDATORS = {
-    ExtractedSection.SECTION_REGISTRATION_NO: re.compile(r"^\d+$"),
-    ExtractedSection.SECTION_ROLL_NO: re.compile(r"^\d+$"),
-    ExtractedSection.SECTION_COURSE_CODE: re.compile(r"^[A-Za-z0-9]+$"),
+    "registration_no":     _NUMERIC,
+    "roll_no":             _NUMERIC,
+    "roll_no_written":     _NUMERIC,
+    "course_code":         _ALPHANUM,
+    "course_code_written": _ALPHANUM,
 }
 
 
@@ -31,12 +36,8 @@ def validate_section_text(section_type: str, text: str) -> tuple[bool, str]:
     if not text:
         return False, "Value cannot be empty."
     if not pattern.match(text):
-        if section_type in (
-            ExtractedSection.SECTION_REGISTRATION_NO,
-            ExtractedSection.SECTION_ROLL_NO,
-        ):
-            return False, f"{section_type} must be numeric."
-        return False, f"{section_type} must be alphanumeric."
+        kind = "numeric" if pattern is _NUMERIC else "alphanumeric"
+        return False, f"{section_type} must be {kind}."
     return True, ""
 
 
