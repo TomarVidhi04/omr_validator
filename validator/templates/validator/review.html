@@ -1,0 +1,159 @@
+{% extends "validator/base.html" %}
+{% block title %}Review · {{ section.omr_image.image_name }}/{{ section.section_type }}{% endblock %}
+
+{% block head %}
+  <style>
+    .grid { display:grid; grid-template-columns: 1fr 420px; gap:20px; align-items:start; }
+    @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+    .panel { background:#fff; border:1px solid var(--bd); border-radius:8px; padding:14px; }
+    .panel h2 { margin-top:0; }
+    .img-wrap { background:#000; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+    .img-wrap img { max-width:100%; max-height:600px; display:block; }
+    .img-wrap.crop img { max-height:200px; background:#fff; }
+    .pred { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--bd); border-radius:6px; margin-bottom:8px; cursor:pointer; background:#fff; }
+    .pred:hover { border-color: var(--accent); }
+    .pred.selected { border-color: var(--accent); background:#eff6ff; }
+    .pred .key { font-family: ui-monospace, Menlo, monospace; font-size:12px; background:#f3f4f6; border:1px solid var(--bd); border-radius:4px; padding:1px 6px; }
+    .pred .model { font-weight:500; min-width:60px; }
+    .pred .text { font-family: ui-monospace, Menlo, monospace; flex:1; font-size:15px; }
+    .pred .conf { color:var(--muted); font-size:12px; }
+    input[type=text] { font:inherit; padding:8px 10px; border:1px solid var(--bd); border-radius:6px; width:100%; font-family: ui-monospace, Menlo, monospace; font-size:15px; }
+    textarea { font:inherit; padding:8px 10px; border:1px solid var(--bd); border-radius:6px; width:100%; min-height:50px; }
+    label { display:block; font-size:12px; color:var(--muted); margin: 10px 0 4px; }
+    .actions { display:flex; gap:8px; margin-top:14px; }
+    .meta { color: var(--muted); font-size:13px; margin-bottom:10px; }
+    .hint { font-size:12px; color:var(--muted); margin-top:6px; }
+  </style>
+{% endblock %}
+
+{% block headinfo %}
+  Section #{{ section.id }} · <span class="pill pill-{{ section.queue_status }}">{{ section.queue_status }}</span>
+{% endblock %}
+
+{% block content %}
+  <div class="meta">
+    <strong>{{ section.omr_image.image_name }}</strong> · {{ section.section_type }}
+  </div>
+
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <h2>Original OMR sheet</h2>
+        <div class="img-wrap">
+          <img src="{{ original_url }}" alt="OMR sheet">
+        </div>
+      </div>
+      <div class="panel" style="margin-top:16px;">
+        <h2>Extracted crop · <span class="muted">{{ section.section_type }}</span></h2>
+        <div class="img-wrap crop">
+          <img src="{{ section_url }}" alt="Section crop">
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2>OCR predictions</h2>
+
+        {% if predictions %}
+          <div id="predictions">
+            {% for p in predictions %}
+              <div class="pred"
+                   data-text="{{ p.predicted_text }}"
+                   data-model="{{ p.model_name }}"
+                   data-index="{{ forloop.counter }}"
+                   onclick="selectPrediction(this)">
+                <span class="key">{{ forloop.counter }}</span>
+                <span class="model">{{ p.model_name|upper }}</span>
+                <span class="text">{{ p.predicted_text|default:"(empty)" }}</span>
+                <span class="conf">{{ p.confidence|floatformat:2 }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted">No predictions yet. Run <code>python manage.py run_ocr --section-id {{ section.id }}</code>.</p>
+        {% endif %}
+
+        <form method="post" id="review-form">
+          {% csrf_token %}
+          <label for="final_text">Final value</label>
+          <input type="text" id="final_text" name="final_text"
+                 value="{% if final_label %}{{ final_label.final_text }}{% endif %}"
+                 autocomplete="off" autofocus>
+
+          <input type="hidden" name="selected_model" id="selected_model"
+                 value="{% if final_label %}{{ final_label.selected_model }}{% else %}manual{% endif %}">
+
+          <label for="reviewer_notes">Notes (optional)</label>
+          <textarea id="reviewer_notes" name="reviewer_notes">{% if final_label %}{{ final_label.reviewer_notes }}{% endif %}</textarea>
+
+          <div class="actions">
+            <button type="submit" class="btn-primary">Save &amp; next (Enter)</button>
+            <a class="btn" href="{% url 'dashboard' %}">Back</a>
+          </div>
+          <p class="hint">Shortcuts: <b>1/2/3</b> select prediction, <b>Enter</b> save &amp; next.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const finalInput = document.getElementById('final_text');
+      const modelInput = document.getElementById('selected_model');
+      const form = document.getElementById('review-form');
+
+      window.selectPrediction = function (el) {
+        document.querySelectorAll('.pred').forEach(p => p.classList.remove('selected'));
+        el.classList.add('selected');
+        finalInput.value = el.dataset.text || '';
+        modelInput.value = el.dataset.model || 'manual';
+        finalInput.focus();
+        finalInput.select();
+      };
+
+      // If the user edits the text manually, switch the model back to "manual".
+      finalInput.addEventListener('input', function () {
+        const selected = document.querySelector('.pred.selected');
+        if (!selected || selected.dataset.text !== finalInput.value) {
+          modelInput.value = 'manual';
+          document.querySelectorAll('.pred').forEach(p => p.classList.remove('selected'));
+        }
+      });
+
+      document.addEventListener('keydown', function (e) {
+        const tag = (e.target.tagName || '').toLowerCase();
+        const isTyping = tag === 'textarea';
+        // Enter inside the textarea inserts a newline; everywhere else submits.
+        if (e.key === 'Enter' && !isTyping) {
+          e.preventDefault();
+          form.submit();
+          return;
+        }
+        if (isTyping || tag === 'input') {
+          // Allow number keys while typing text. Only fire shortcut on plain keypress
+          // when focus is NOT on the text field, OR with the field empty + modifier-free.
+          if (tag === 'input' && document.activeElement === finalInput) {
+            return;
+          }
+        }
+        if (['1', '2', '3', '4', '5'].includes(e.key)) {
+          const idx = parseInt(e.key, 10);
+          const target = document.querySelector('.pred[data-index="' + idx + '"]');
+          if (target) {
+            e.preventDefault();
+            selectPrediction(target);
+          }
+        }
+      });
+
+      // Pre-select the prediction that matches the currently saved final_label.
+      const current = finalInput.value;
+      if (current) {
+        document.querySelectorAll('.pred').forEach(p => {
+          if (p.dataset.text === current) p.classList.add('selected');
+        });
+      }
+    })();
+  </script>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "validator/base.html" %}
+{% block title %}Stats · OMR Validator{% endblock %}
+
+{% block head %}
+  <style>
+    .cards { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+    .card { background:#fff; border:1px solid var(--bd); border-radius:8px; padding:14px; }
+    .card .n { font-size:28px; font-weight:600; }
+    .card .lbl { color: var(--muted); font-size:13px; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <h1>Statistics</h1>
+
+  <h2>Sections</h2>
+  <div class="cards">
+    <div class="card"><div class="n">{{ section_totals.total }}</div><div class="lbl">Total sections</div></div>
+    <div class="card"><div class="n">{{ section_totals.completed }}</div><div class="lbl">Reviewed</div></div>
+    <div class="card"><div class="n">{{ section_totals.pending }}</div><div class="lbl">Pending</div></div>
+    <div class="card"><div class="n">{{ section_totals.auto_validated }}</div><div class="lbl">Auto-validated</div></div>
+  </div>
+
+  <h2>OMR images</h2>
+  <div class="cards">
+    <div class="card"><div class="n">{{ image_totals.total }}</div><div class="lbl">Total images</div></div>
+    <div class="card"><div class="n">{{ image_totals.completed }}</div><div class="lbl">Fully reviewed</div></div>
+  </div>
+
+  <h2>By section type</h2>
+  {% if by_section_type %}
+    <table>
+      <thead><tr><th>Section type</th><th>Total</th><th>Reviewed</th></tr></thead>
+      <tbody>
+        {% for r in by_section_type %}
+          <tr>
+            <td>{{ r.section_type }}</td>
+            <td>{{ r.total }}</td>
+            <td>{{ r.completed }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No sections yet.</p>
+  {% endif %}
+
+  <h2>By chosen model</h2>
+  {% if by_model %}
+    <table>
+      <thead><tr><th>Selected model</th><th>Count</th></tr></thead>
+      <tbody>
+        {% for r in by_model %}
+          <tr>
+            <td>{{ r.selected_model }}</td>
+            <td>{{ r.n }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No labels saved yet.</p>
+  {% endif %}
+{% endblock %}

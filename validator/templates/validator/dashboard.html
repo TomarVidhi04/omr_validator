@@ -1,0 +1,55 @@
+{% extends "validator/base.html" %}
+{% block title %}Dashboard · OMR Validator{% endblock %}
+
+{% block headinfo %}
+  {{ totals.completed }} / {{ totals.total }} sections reviewed
+{% endblock %}
+
+{% block content %}
+  <h1>Queue</h1>
+
+  <div class="toolbar">
+    <div class="group">
+      <a class="btn {% if status_filter == 'all' %}active{% endif %}" href="?status=all">All ({{ totals.total }})</a>
+      <a class="btn {% if status_filter == 'pending' %}active{% endif %}" href="?status=pending">Pending ({{ totals.pending }})</a>
+      <a class="btn {% if status_filter == 'completed' %}active{% endif %}" href="?status=completed">Completed</a>
+      <a class="btn {% if status_filter == 'auto_validated' %}active{% endif %}" href="?status=auto_validated">Auto-validated</a>
+    </div>
+  </div>
+
+  {% if rows %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>OMR image</th>
+          <th>Section</th>
+          <th>Status</th>
+          <th>Predictions</th>
+          <th>Final text</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.image_name }}</td>
+            <td>{{ row.section_type }}</td>
+            <td><span class="pill pill-{{ row.status }}">{{ row.status }}</span></td>
+            <td>{{ row.n_predictions }}</td>
+            <td><code>{{ row.final_text|default:"—" }}</code></td>
+            <td><a class="btn" href="{% url 'review' row.id %}">Review →</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="muted" style="margin-top:8px;">Showing up to 500 rows.</p>
+  {% else %}
+    <p class="muted">
+      Nothing here yet. Run
+      <code>python manage.py ingest_data</code> then
+      <code>python manage.py run_ocr</code>.
+    </p>
+  {% endif %}
+{% endblock %}

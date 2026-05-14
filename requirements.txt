@@ -1,0 +1,12 @@
+# Core
+Django>=5.0,<6.0
+Pillow>=10.0
+
+# OCR models (optional — services degrade gracefully if not installed)
+torch
+transformers>=4.40
+sentencepiece
+accelerate
+
+# GLM Vision (optional — only needed if you use the GLM service)
+zhipuai>=2.0
