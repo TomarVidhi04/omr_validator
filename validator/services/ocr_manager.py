@@ -24,10 +24,10 @@ from .trocr_ocr import TrOcrService
 logger = logging.getLogger(__name__)
 
 _DEFAULT_SERVICE_CLASSES: list[type[BaseOcrService]] = [
-    EasyOcrService,   # reliable on macOS CPU, ~100MB on first run
-    # GlmOcrService,  # cloud API — uncomment + set ZHIPUAI_API_KEY to enable
-    # TrOcrService,   # hallucinates on handwritten codes; uncomment if useful
-    # DotsOcrService, # custom model has Python 3.14 / transformers compat bug
+    EasyOcrService,   # reliable on CPU, ~100MB on first run
+    GlmOcrService,    # cloud API — needs ZHIPUAI_API_KEY env var
+    TrOcrService,     # ~1.3GB on first run, runs fast on GPU
+    DotsOcrService,   # ~6GB on first run, best on GPU
 ]
 
 

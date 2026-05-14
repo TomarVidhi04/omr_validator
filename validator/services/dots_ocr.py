@@ -73,6 +73,13 @@ class DotsOcrService(BaseOcrService):
         # dots.ocr's processor includes ``mm_token_type_ids`` which the model's
         # generate() rejects. Drop any keys the model doesn't accept.
         inputs.pop("mm_token_type_ids", None)
+        # The custom model's prepare_inputs_for_generation indexes into
+        # cache_position; transformers >=4.55 doesn't always pre-populate it
+        # for custom model classes, so do it ourselves.
+        if "cache_position" not in inputs:
+            inputs["cache_position"] = torch.arange(
+                inputs["input_ids"].shape[1], device=self._device
+            )
         with torch.no_grad():
             output_ids = self._model.generate(
                 **inputs, max_new_tokens=64, do_sample=False
