@@ -14,8 +14,8 @@ db.sqlite3-journal
 *.log
 
 # Pipeline I/O — raw scans, cropped sheets, section crops
-data screen/
-output/
+# data screen/
+# output/
 
 # OS
 .DS_Store
